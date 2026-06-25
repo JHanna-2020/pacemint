@@ -2,10 +2,10 @@
 
 ## Deployment under test
 
-- New deployment: https://pacemint-ddv77shn4-john-hanna.vercel.app
-- Stable URL: https://pacemint.vercel.app
+- New deployment: https://pacemint-m0yi4meia-john-hanna.vercel.app
+- Stable URL: https://ledgerline-budget.vercel.app
 
-Test the new deployment URL first. The stable alias update previously stalled, so verify that the stable URL matches before sharing it publicly.
+Test the new deployment URL first. Verify that the stable alias matches before sharing it publicly.
 
 Use a disposable account and fake financial data. Do not use a real card number, bank login, password used elsewhere, or real financial export.
 

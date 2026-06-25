@@ -25,7 +25,7 @@ describe('feedback service', () => {
         details: 'Show the exact categories behind the answer.',
         impact: 'It would make the answer easier to trust.',
         userEmail: 'user@example.com',
-        submittedFrom: 'https://pacemint.vercel.app'
+        submittedFrom: 'https://ledgerline-budget.vercel.app'
       },
       { WEB3FORMS_ACCESS_KEY: 'test-key', FEEDBACK_TO_EMAIL: 'hannagonjohn@gmail.com' }
     );
