@@ -65,7 +65,8 @@ If port `5173` is busy, Vite may use `5174` or another port.
 
 ## 4. Supabase Requirements
 
-The app expects these tables to already exist:
+For a brand-new empty Supabase project, first run
+`supabase/bootstrap-blank-project.sql`. The app expects these tables to exist:
 
 - `user_settings`
 - `budget_categories`

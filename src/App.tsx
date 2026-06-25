@@ -169,6 +169,7 @@ export default function App() {
         {floatingThemeToggle}
         <AuthView initialMode={authMode} onMessage={setToast} onAuthenticated={setPendingPassword} />
         {showProductOnboarding && <ProductOnboarding onClose={dismissProductOnboarding} />}
+        {toast && <div className="toast">{toast}</div>}
       </>
     ) : (
       <>

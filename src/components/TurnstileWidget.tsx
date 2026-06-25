@@ -14,9 +14,9 @@ function loadTurnstile(): Promise<void> {
   scriptPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => window.turnstile?.ready(resolve);
+    // The load event fires after the explicit-render API is available. Calling
+    // turnstile.ready() from an async/defer script is rejected by Cloudflare.
+    script.onload = () => (window.turnstile ? resolve() : reject(new Error('Bot protection did not initialize.')));
     script.onerror = () => reject(new Error('Bot protection could not load.'));
     document.head.appendChild(script);
   });

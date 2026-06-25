@@ -31,36 +31,39 @@ export function AuthView({ onMessage, onAuthenticated, initialMode = 'signin' }:
     setLoading(true);
     setError(null);
 
-    const options = { captchaToken: captchaToken ?? undefined };
-    const result =
-      mode === 'signin'
-        ? await supabase.auth.signInWithPassword({ email, password, options })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: { ...options, emailRedirectTo: window.location.origin }
-          });
-    setCaptchaToken(null);
-    setCaptchaResetKey((value) => value + 1);
+    try {
+      const options = { captchaToken: captchaToken ?? undefined };
+      const result =
+        mode === 'signin'
+          ? await supabase.auth.signInWithPassword({ email, password, options })
+          : await supabase.auth.signUp({
+              email,
+              password,
+              options: { ...options, emailRedirectTo: window.location.origin }
+            });
 
-    if (result.error) {
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+
+      // If email confirmation is enabled, sign-up returns no session yet. The
+      // encryption vault is set up on the first authenticated visit instead.
+      const session = result.data.session;
+      if (!session) {
+        onMessage('Account created. Check your email to confirm it, then sign in.');
+        return;
+      }
+
+      onAuthenticated(password);
+      onMessage('Signed in. Unlocking your encrypted vault.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Account request failed. Please try again.');
+    } finally {
       setLoading(false);
-      setError(result.error.message);
-      return;
+      setCaptchaToken(null);
+      setCaptchaResetKey((value) => value + 1);
     }
-
-    // If email confirmation is enabled, sign-up returns no session yet. The
-    // encryption vault is set up on the first authenticated visit instead.
-    const session = result.data.session;
-    if (!session) {
-      setLoading(false);
-      onMessage('Check your email to confirm your account, then sign in.');
-      return;
-    }
-
-    setLoading(false);
-    onAuthenticated(password);
-    onMessage('Signed in. Unlocking your encrypted vault.');
   }
 
   async function sendReset(event: FormEvent) {

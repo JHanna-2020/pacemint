@@ -4,7 +4,7 @@ A private, multi-user personal budgeting dashboard built with Vite, React, TypeS
 
 ## Supabase setup
 
-The app does not run migrations. Apply the schema once by running [`supabase/encryption-setup.sql`](supabase/encryption-setup.sql) in the Supabase SQL editor. It creates the tables, the `user_keys` key-storage table, and the row-level-security policies.
+The app does not run migrations automatically. For a blank Supabase project, run [`supabase/bootstrap-blank-project.sql`](supabase/bootstrap-blank-project.sql), then [`supabase/encryption-setup.sql`](supabase/encryption-setup.sql), then every file in `supabase/migrations/` in filename order.
 
 Tables store only structural columns (`id`, `user_id`, `recurring_id`, timestamps) plus a single encrypted `enc_payload` column that holds every sensitive field:
 
