@@ -2,7 +2,7 @@
 
 ## Deployment under test
 
-- Stable URL: https://ledgerline-budget.vercel.app
+- Stable URL: https://pacemint.vercel.app
 
 If testing a specific generated Vercel deployment URL, use the URL from the latest deploy output. Verify that the stable alias matches before sharing it publicly.
 

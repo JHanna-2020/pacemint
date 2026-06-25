@@ -14,7 +14,7 @@ The local application now queries `month_key` columns and calls quota/deletion R
 
 `supabase/migrations/202606190001_multi_user_hardening.sql`
 
-The latest deployment at `https://ledgerline-budget.vercel.app` predates this multi-user hardening work. It includes the earlier UI fixes and Excel export, but not the unfinished hardening changes described here.
+The latest deployment at `https://pacemint.vercel.app` predates this multi-user hardening work. It includes the earlier UI fixes and Excel export, but not the unfinished hardening changes described here.
 
 ## Completed local implementation
 
@@ -263,7 +263,7 @@ Create a Vercel WAF rate-limit rule for `POST /api/chat`, initially in Log mode,
 6. Back up production and apply the migration.
 7. Add production Vercel secrets.
 8. Deploy production.
-9. Verify both `ledgerline-budget.vercel.app` and its project aliases point to the intended deployment.
+9. Verify both `pacemint.vercel.app` and its project aliases point to the intended deployment.
 
 ## Research sources
 
