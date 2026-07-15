@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Copy, KeyRound, RefreshCw } from 'lucide-react';
+import { ChangeEvent, useState } from 'react';
+import { Copy, KeyRound, RefreshCw, ShieldCheck } from 'lucide-react';
 import { regenerateRecoveryCode } from '../lib/encryptionSession';
+import { UserSettings } from '../lib/types';
 import { AccountDeletion } from './AccountDeletion';
 import { MfaSettings } from './MfaSettings';
 import { AccountSecurity } from './AccountSecurity';
@@ -8,10 +9,12 @@ import { AccountSecurity } from './AccountSecurity';
 type Props = {
   userId: string;
   userEmail: string;
+  settings: UserSettings | null;
+  onToggleExcludeDescriptions: (value: boolean) => Promise<void>;
   onMessage: (message: string) => void;
 };
 
-export function SettingsPanel({ userId, userEmail, onMessage }: Props) {
+export function SettingsPanel({ userId, userEmail, settings, onToggleExcludeDescriptions, onMessage }: Props) {
   const [recoveryCode, setRecoveryCode] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
@@ -41,6 +44,18 @@ export function SettingsPanel({ userId, userEmail, onMessage }: Props) {
     onMessage('Recovery code copied.');
   }
 
+  const [privacyLoading, setPrivacyLoading] = useState(false);
+
+  async function toggleExcludeDescriptions(event: ChangeEvent<HTMLInputElement>) {
+    setPrivacyLoading(true);
+    try {
+      await onToggleExcludeDescriptions(event.target.checked);
+      onMessage(event.target.checked ? 'Expense descriptions excluded from AI chat.' : 'Expense descriptions included in AI chat.');
+    } finally {
+      setPrivacyLoading(false);
+    }
+  }
+
   return (
     <section className="panel settings-panel">
       <div className="panel-heading">
@@ -54,6 +69,31 @@ export function SettingsPanel({ userId, userEmail, onMessage }: Props) {
 
       <div className="settings-divider" />
       <MfaSettings />
+
+      <div className="settings-divider" />
+      <div className="security-panel">
+        <div className="security-heading">
+          <ShieldCheck size={20} />
+          <div>
+            <p className="eyebrow">Privacy</p>
+            <h3>AI chat</h3>
+          </div>
+        </div>
+        <p className="settings-copy">
+          When on, AI chat still sees your budget summary, categories, and amounts, but expense descriptions are left
+          out of what's sent to OpenRouter.
+        </p>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: 'row' }}>
+          <input
+            type="checkbox"
+            checked={settings?.excludeDescriptionsFromAI ?? false}
+            onChange={toggleExcludeDescriptions}
+            disabled={privacyLoading}
+            style={{ width: 'auto' }}
+          />
+          Exclude expense descriptions from AI chat
+        </label>
+      </div>
 
       <div className="settings-divider" />
       <div className="security-panel">

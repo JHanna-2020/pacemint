@@ -140,31 +140,43 @@ export async function unlockWithPassword(userId: string, password: string): Prom
   }
 }
 
-// Recover with the one-time recovery code and re-wrap the DEK under a new
-// password. Used by the forgot-password flow after the auth password is reset.
-export async function recoverWithCode(userId: string, recoveryCode: string, newPassword: string): Promise<void> {
+// Read-only: validates a recovery code and returns the unwrapped DEK without
+// committing anything. Callers that also need to change the Supabase Auth
+// password (e.g. ResetPasswordView) should validate the code with this
+// *before* touching Auth, so a wrong code fails before anything is mutated.
+export async function validateRecoveryCode(userId: string, recoveryCode: string): Promise<CryptoKey> {
   const keys = await loadUserKeys(userId);
   if (!keys) throw new Error('No encryption keys found for this account.');
-
   const recoveryKek = await deriveRecoveryKey(recoveryCode, keys.recovery_salt, keys.kdf_iterations);
-  let dek: CryptoKey;
   try {
-    dek = await unwrapDEK(parseWrapped(keys.wrapped_dek_recovery), recoveryKek);
+    return await unwrapDEK(parseWrapped(keys.wrapped_dek_recovery), recoveryKek);
   } catch {
     throw new Error('That recovery code is not valid.');
   }
+}
 
+// Commits a recovery: re-wraps an already-validated DEK under a new password
+// and activates it. Call validateRecoveryCode first.
+export async function commitRecovery(userId: string, dek: CryptoKey, newPassword: string): Promise<void> {
+  const keys = await loadUserKeys(userId);
+  if (!keys) throw new Error('No encryption keys found for this account.');
   const newSalt = generateSalt();
   const newKek = await derivePasswordKey(newPassword, newSalt, keys.kdf_iterations);
   const rewrapped = await wrapDEK(dek, newKek);
-
   const { error } = await supabase
     .from('user_keys')
     .update({ kdf_salt: newSalt, wrapped_dek_password: serializeWrapped(rewrapped) })
     .eq('user_id', userId);
   if (error) throw new Error(error.message);
-
   setDEK(dek);
+}
+
+// Recover with the one-time recovery code and re-wrap the DEK under a new
+// password. Used by VaultGate's recover flow, which has no Auth-password
+// interaction to sequence around.
+export async function recoverWithCode(userId: string, recoveryCode: string, newPassword: string): Promise<void> {
+  const dek = await validateRecoveryCode(userId, recoveryCode);
+  await commitRecovery(userId, dek, newPassword);
 }
 
 // Change the password while unlocked: re-wrap the in-memory DEK under a new

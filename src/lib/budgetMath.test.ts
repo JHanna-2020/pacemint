@@ -10,6 +10,7 @@ const settings: UserSettings = {
   savingsTarget: 800,
   budgetMode: 'monthly',
   statementProfiles: [],
+  excludeDescriptionsFromAI: false,
   updatedAt: null
 };
 

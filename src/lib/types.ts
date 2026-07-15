@@ -76,6 +76,7 @@ export type SettingsPayload = {
   savingsTarget: number;
   budgetMode?: BudgetMode;
   statementProfiles?: StatementProfile[];
+  excludeDescriptionsFromAI?: boolean;
 };
 
 export type CategoryPayload = {
@@ -113,6 +114,7 @@ export type UserSettings = {
   savingsTarget: number;
   budgetMode: BudgetMode;
   statementProfiles: StatementProfile[];
+  excludeDescriptionsFromAI: boolean;
   updatedAt: string | null;
 };
 

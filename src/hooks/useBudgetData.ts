@@ -137,7 +137,8 @@ export function useBudgetData(session: Session | null, vaultUnlocked: boolean) {
       monthlyBudget: data.settings?.monthlyBudget ?? 0,
       savingsTarget: data.settings?.savingsTarget ?? 0,
       budgetMode: data.settings?.budgetMode ?? mode,
-      statementProfiles
+      statementProfiles,
+      excludeDescriptionsFromAI: data.settings?.excludeDescriptionsFromAI ?? false
     });
     if (!statementProfiles.some((profile) => profile.id === selectedProfileId)) {
       const next = statementProfiles.find((profile) => !profile.archivedAt) ?? statementProfiles[0] ?? null;
@@ -166,7 +167,17 @@ export function useBudgetData(session: Session | null, vaultUnlocked: boolean) {
       saveFullSettings({
         ...input,
         budgetMode: data.settings?.budgetMode ?? mode,
-        statementProfiles: data.settings?.statementProfiles ?? []
+        statementProfiles: data.settings?.statementProfiles ?? [],
+        excludeDescriptionsFromAI: data.settings?.excludeDescriptionsFromAI ?? false
+      }),
+    setExcludeDescriptionsFromAI: (value: boolean) =>
+      saveFullSettings({
+        monthlyIncome: data.settings?.monthlyIncome ?? 0,
+        monthlyBudget: data.settings?.monthlyBudget ?? 0,
+        savingsTarget: data.settings?.savingsTarget ?? 0,
+        budgetMode: data.settings?.budgetMode ?? mode,
+        statementProfiles: data.settings?.statementProfiles ?? [],
+        excludeDescriptionsFromAI: value
       }),
     saveStatementProfiles,
     saveCategoryLimit: (category: Category, monthlyLimit: number) =>
@@ -213,13 +224,13 @@ export function useBudgetData(session: Session | null, vaultUnlocked: boolean) {
       }),
     createExpense: (draft: Omit<Expense, 'id' | 'userId' | 'createdAt'>) => run(() => repo.createExpense(userId!, draft)),
     updateExpense: (expenseId: string, draft: Omit<Expense, 'id' | 'userId' | 'createdAt'>) =>
-      run(() => repo.updateExpense(expenseId, draft)),
-    deleteExpense: (expenseId: string) => run(() => repo.deleteExpense(expenseId)),
+      run(() => repo.updateExpense(userId!, expenseId, draft)),
+    deleteExpense: (expenseId: string) => run(() => repo.deleteExpense(userId!, expenseId)),
     createOneTimeIncome: (draft: { description: string; amount: number; receivedOn: string }) =>
       run(() => repo.createOneTimeIncome(userId!, draft)),
     updateOneTimeIncome: (incomeId: string, draft: { description: string; amount: number; receivedOn: string }) =>
-      run(() => repo.updateOneTimeIncome(incomeId, draft)),
-    deleteOneTimeIncome: (incomeId: string) => run(() => repo.deleteOneTimeIncome(incomeId)),
+      run(() => repo.updateOneTimeIncome(userId!, incomeId, draft)),
+    deleteOneTimeIncome: (incomeId: string) => run(() => repo.deleteOneTimeIncome(userId!, incomeId)),
     createRecurringExpense: (draft: {
       description: string;
       amount: number;
@@ -227,7 +238,7 @@ export function useBudgetData(session: Session | null, vaultUnlocked: boolean) {
       dayOfMonth: number;
       statementProfileId?: string | null;
     }) => run(() => repo.createRecurringExpense(userId!, draft)),
-    deleteRecurringExpense: (recurringId: string) => run(() => repo.deleteRecurringExpense(recurringId)),
+    deleteRecurringExpense: (recurringId: string) => run(() => repo.deleteRecurringExpense(userId!, recurringId)),
     exportData: async () => (userId ? repo.exportAllData(userId) : null),
     importData: (payload: Record<string, unknown>) => run(() => repo.importData(userId!, payload))
   };

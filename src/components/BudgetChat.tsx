@@ -11,6 +11,7 @@ type Props = {
   categories: CategorySummary[];
   expenses: Expense[];
   recurringExpenses: RecurringExpense[];
+  excludeDescriptions: boolean;
 };
 
 const STARTERS = [
@@ -20,7 +21,7 @@ const STARTERS = [
   'What should I watch for the rest of the month?'
 ];
 
-export function BudgetChat({ period, summary, categories, expenses, recurringExpenses }: Props) {
+export function BudgetChat({ period, summary, categories, expenses, recurringExpenses, excludeDescriptions }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
@@ -32,8 +33,8 @@ export function BudgetChat({ period, summary, categories, expenses, recurringExp
   const [error, setError] = useState<string | null>(null);
   const [model, setModel] = useState<string | null>(null);
   const context = useMemo(
-    () => buildChatBudgetContext({ period, summary, categories, expenses, recurringExpenses }),
-    [categories, expenses, period, recurringExpenses, summary]
+    () => buildChatBudgetContext({ period, summary, categories, expenses, recurringExpenses, excludeDescriptions }),
+    [categories, expenses, period, recurringExpenses, summary, excludeDescriptions]
   );
 
   async function submitMessage(message: string) {

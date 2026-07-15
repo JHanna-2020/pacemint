@@ -9,6 +9,14 @@ describe('Turnstile verification', () => {
     });
   });
 
+  it('fails closed when running on Vercel without a secret configured', async () => {
+    await expect(
+      verifyTurnstile(null, null, { VERCEL: '1' }, async () => {
+        throw new Error('not called');
+      })
+    ).resolves.toEqual({ ok: false, status: 503, error: 'Bot-protection is not configured. Try again later.' });
+  });
+
   it('rejects missing tokens when configured', async () => {
     await expect(verifyTurnstile(null, null, { TURNSTILE_SECRET_KEY: 'secret' })).resolves.toMatchObject({
       ok: false,

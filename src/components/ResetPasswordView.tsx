@@ -2,7 +2,7 @@ import { FormEvent, useState } from 'react';
 import { KeyRound } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { recoverWithCode } from '../lib/encryptionSession';
+import { commitRecovery, validateRecoveryCode } from '../lib/encryptionSession';
 import { PasswordField } from './PasswordField';
 
 type Props = {
@@ -25,9 +25,12 @@ export function ResetPasswordView({ session, onMessage }: Props) {
     setLoading(true);
     setError(null);
     try {
+      // Validate the recovery code first -- a wrong code throws here with no
+      // writes yet, instead of after the Auth password has already changed.
+      const dek = await validateRecoveryCode(session.user.id, recoveryCode);
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw new Error(updateError.message);
-      await recoverWithCode(session.user.id, recoveryCode, password);
+      await commitRecovery(session.user.id, dek, password);
       onMessage('Password updated and your data is restored.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reset your password.');
