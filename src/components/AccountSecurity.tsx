@@ -9,6 +9,26 @@ type Props = {
   onMessage: (message: string) => void;
 };
 
+// Best-effort rollback after an Auth password-update failure: the vault was
+// already re-wrapped under the new password. Retry a few times -- a
+// transient failure here is worse than one on the forward path, since it
+// leaves Auth and the vault expecting different passwords.
+async function rollbackEncryptionPassword(userId: string, previousPassword: string, attempts = 3): Promise<void> {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await changeEncryptionPassword(userId, previousPassword);
+      return;
+    } catch {
+      if (attempt === attempts) {
+        throw new Error(
+          'Password change failed and could not be undone automatically. Your vault may now require the NEW password you just entered — use "Forgot password" and your recovery code to restore access. Do not sign out first.'
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+    }
+  }
+}
+
 export function AccountSecurity({ email, userId, onMessage }: Props) {
   const [nextEmail, setNextEmail] = useState(email);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -41,7 +61,7 @@ export function AccountSecurity({ email, userId, onMessage }: Props) {
       await changeEncryptionPassword(userId, newPassword);
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       if (updateError) {
-        await changeEncryptionPassword(userId, currentPassword);
+        await rollbackEncryptionPassword(userId, currentPassword);
         throw new Error(updateError.message);
       }
       setCurrentPassword('');

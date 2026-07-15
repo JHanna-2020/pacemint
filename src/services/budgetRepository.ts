@@ -51,6 +51,7 @@ async function mapSettings(row: UserSettingsRow | null): Promise<UserSettings | 
     savingsTarget: payload.savingsTarget,
     budgetMode: payload.budgetMode ?? 'monthly',
     statementProfiles: payload.statementProfiles ?? [],
+    excludeDescriptionsFromAI: payload.excludeDescriptionsFromAI ?? false,
     updatedAt: row.updated_at
   };
 }
@@ -112,6 +113,17 @@ function requireNoError(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
 }
 
+// RLS already blocks cross-tenant writes, but it does so silently (Supabase
+// returns `{ error: null, data: [] }`, not an error) -- an IDOR attempt
+// against another user's id and a genuine bug (stale/deleted id) both look
+// like a no-op success without this check. Callers must add `.select('id')`
+// to the update/delete chain for this to have rows to inspect.
+function requireAffectedRow(rows: { id: string }[] | null, action: string): void {
+  if (!rows || rows.length === 0) {
+    throw new Error(`${action} failed: no matching row was found for this account.`);
+  }
+}
+
 // Sensitive dates remain encrypted, while the structural month_key allows
 // month-scoped queries. Legacy rows with no month_key are decrypted once and
 // backfilled after ownership is enforced by RLS.
@@ -140,7 +152,12 @@ async function loadMonthExpenseRows(userId: string, monthKey: string): Promise<E
     source.map((row, index) =>
       row.month_key
         ? Promise.resolve()
-        : supabase.from('expenses').update({ month_key: expenses[index].spentOn.slice(0, 7) }).eq('id', row.id).then(() => undefined)
+        : supabase
+            .from('expenses')
+            .update({ month_key: expenses[index].spentOn.slice(0, 7) })
+            .eq('id', row.id)
+            .eq('user_id', userId)
+            .then(() => undefined)
     )
   );
   return source;
@@ -171,6 +188,7 @@ async function loadMonthIncome(userId: string, monthKey: string): Promise<OneTim
             .from('one_time_income')
             .update({ month_key: income[index].receivedOn.slice(0, 7) })
             .eq('id', row.id)
+            .eq('user_id', userId)
             .then(() => undefined)
     )
   );
@@ -279,7 +297,8 @@ export async function saveSettings(userId: string, input: Omit<UserSettings, 'us
     monthlyBudget: input.monthlyBudget,
     savingsTarget: input.savingsTarget,
     budgetMode: input.budgetMode,
-    statementProfiles: input.statementProfiles
+    statementProfiles: input.statementProfiles,
+    excludeDescriptionsFromAI: input.excludeDescriptionsFromAI
   });
   const { error } = await supabase.from('user_settings').upsert(
     { user_id: userId, enc_payload, updated_at: nowIso() },
@@ -299,11 +318,14 @@ export async function saveCategoryLimit(
   // upsert; we update the existing row by id or insert a new one.
   const enc_payload = await encrypt<CategoryPayload>({ category, monthlyLimit, statementProfileId });
   if (existing) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('budget_categories')
       .update({ enc_payload, updated_at: nowIso() })
-      .eq('id', existing.id);
+      .eq('id', existing.id)
+      .eq('user_id', userId)
+      .select('id');
     requireNoError(error);
+    requireAffectedRow(data, 'Updating this category');
     return;
   }
   const { error } = await supabase
@@ -331,7 +353,7 @@ export async function createExpense(userId: string, draft: ExpenseDraft): Promis
   requireNoError(error);
 }
 
-export async function updateExpense(expenseId: string, draft: ExpenseDraft): Promise<void> {
+export async function updateExpense(userId: string, expenseId: string, draft: ExpenseDraft): Promise<void> {
   const enc_payload = await encrypt<ExpensePayload>({
     description: draft.description.trim(),
     amount: draft.amount,
@@ -339,16 +361,20 @@ export async function updateExpense(expenseId: string, draft: ExpenseDraft): Pro
     spentOn: draft.spentOn,
     statementProfileId: draft.statementProfileId ?? null
   });
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('expenses')
     .update({ enc_payload, month_key: draft.spentOn.slice(0, 7) })
-    .eq('id', expenseId);
+    .eq('id', expenseId)
+    .eq('user_id', userId)
+    .select('id');
   requireNoError(error);
+  requireAffectedRow(data, 'Updating this expense');
 }
 
-export async function deleteExpense(expenseId: string): Promise<void> {
-  const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+export async function deleteExpense(userId: string, expenseId: string): Promise<void> {
+  const { data, error } = await supabase.from('expenses').delete().eq('id', expenseId).eq('user_id', userId).select('id');
   requireNoError(error);
+  requireAffectedRow(data, 'Deleting this expense');
 }
 
 export async function createRecurringExpense(userId: string, draft: RecurringDraft): Promise<void> {
@@ -368,9 +394,15 @@ export async function createRecurringExpense(userId: string, draft: RecurringDra
   requireNoError(error);
 }
 
-export async function deleteRecurringExpense(recurringId: string): Promise<void> {
-  const { error } = await supabase.from('recurring_expenses').delete().eq('id', recurringId);
+export async function deleteRecurringExpense(userId: string, recurringId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('recurring_expenses')
+    .delete()
+    .eq('id', recurringId)
+    .eq('user_id', userId)
+    .select('id');
   requireNoError(error);
+  requireAffectedRow(data, 'Deleting this recurring expense');
 }
 
 export async function createOneTimeIncome(userId: string, draft: OneTimeIncomeDraft): Promise<void> {
@@ -389,22 +421,31 @@ export async function createOneTimeIncome(userId: string, draft: OneTimeIncomeDr
   requireNoError(error);
 }
 
-export async function updateOneTimeIncome(incomeId: string, draft: OneTimeIncomeDraft): Promise<void> {
+export async function updateOneTimeIncome(userId: string, incomeId: string, draft: OneTimeIncomeDraft): Promise<void> {
   const enc_payload = await encrypt<OneTimeIncomePayload>({
     description: draft.description.trim(),
     amount: draft.amount,
     receivedOn: draft.receivedOn
   });
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('one_time_income')
     .update({ enc_payload, month_key: draft.receivedOn.slice(0, 7) })
-    .eq('id', incomeId);
+    .eq('id', incomeId)
+    .eq('user_id', userId)
+    .select('id');
   requireNoError(error);
+  requireAffectedRow(data, 'Updating this income entry');
 }
 
-export async function deleteOneTimeIncome(incomeId: string): Promise<void> {
-  const { error } = await supabase.from('one_time_income').delete().eq('id', incomeId);
+export async function deleteOneTimeIncome(userId: string, incomeId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('one_time_income')
+    .delete()
+    .eq('id', incomeId)
+    .eq('user_id', userId)
+    .select('id');
   requireNoError(error);
+  requireAffectedRow(data, 'Deleting this income entry');
 }
 
 // Inserts a concrete expense for each recurring template not yet present this
@@ -513,6 +554,7 @@ export async function importData(userId: string, payload: Record<string, unknown
       monthlyBudget: num(s.monthlyBudget, s.monthly_budget),
       savingsTarget: num(s.savingsTarget, s.savings_target),
       budgetMode: s.budgetMode === 'statement' ? 'statement' : 'monthly',
+      excludeDescriptionsFromAI: s.excludeDescriptionsFromAI ?? false,
       statementProfiles: (Array.isArray(s.statementProfiles) ? s.statementProfiles : exportedProfiles).map((profile) => ({
             id: String(profile.id || id()),
             name: String(profile.name || 'Statement profile'),

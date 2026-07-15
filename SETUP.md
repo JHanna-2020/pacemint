@@ -75,17 +75,26 @@ For a brand-new empty Supabase project, first run
 - `one_time_income`
 - `user_keys` (added for encryption — see below)
 
-The app does not run migrations. It assumes RLS policies already restrict rows by:
+The app does not run migrations. `supabase/encryption-setup.sql` (below) is
+self-sufficient: applying it alone enables forced, owner-only row-level
+security on every table, scoped by:
 
 ```sql
 user_id = auth.uid()
 ```
 
+Optionally, apply the files in `supabase/migrations/` afterward to upgrade
+that baseline (e.g. to MFA-gated policies) and add indexes, month buckets,
+AI quotas, and account deletion — see `PRODUCTION.md` for the full deployment
+order. Run `supabase/verify-production.sql` at any point to check RLS status;
+it hard-fails with an error message if any table is missing RLS.
+
 ### Run the encryption migration
 
 Open the Supabase SQL editor and run [`supabase/encryption-setup.sql`](supabase/encryption-setup.sql).
-It creates the `user_keys` and `one_time_income` tables and converts the data
-tables to store sensitive fields inside an encrypted `enc_payload` column.
+It creates the `user_keys` and `one_time_income` tables, converts the data
+tables to store sensitive fields inside an encrypted `enc_payload` column,
+and enables row-level security on all 6 tables.
 
 > The migration **drops the old plaintext columns**. If you already have real
 > data, export it from the previous app version first, then re-import after

@@ -21,6 +21,7 @@ export function buildChatBudgetContext(input: {
   categories: CategorySummary[];
   expenses: Expense[];
   recurringExpenses: RecurringExpense[];
+  excludeDescriptions?: boolean;
 }): ChatBudgetContext {
   return {
     period: {
@@ -33,7 +34,7 @@ export function buildChatBudgetContext(input: {
     categories: input.categories,
     recurringTotal: input.recurringExpenses.reduce((sum, item) => sum + item.amount, 0),
     recentExpenses: input.expenses.slice(0, 20).map((expense) => ({
-      description: expense.description,
+      description: input.excludeDescriptions ? '' : expense.description,
       amount: expense.amount,
       category: expense.category,
       spentOn: expense.spentOn,

@@ -3,11 +3,12 @@
 ## Required deployment order
 
 1. Back up the Supabase project.
-2. Apply `supabase/migrations/202606190001_multi_user_hardening.sql`.
-3. Run `supabase/verify-production.sql` and confirm RLS is enabled and forced.
-4. Run `npm run verify:isolation` against a staging Supabase project.
-5. Configure the environment variables below.
-6. Run `npm run check`, deploy a Vercel preview, smoke-test, then promote production.
+2. Confirm `supabase/encryption-setup.sql` has been applied — it alone enables forced, owner-only RLS on all 6 tables, so the app is never left exposed even if step 3 is skipped.
+3. Apply `supabase/migrations/202606190001_multi_user_hardening.sql` — upgrades the baseline RLS from step 2 to MFA-gated policies and adds indexes, month buckets, AI quotas, and account deletion.
+4. Run `supabase/verify-production.sql` — the first block hard-fails (`raise exception`) if any table is missing forced RLS or its hardened owner-access policy; read the error before checking the informational `select`s below it.
+5. Run `npm run verify:isolation` against a staging Supabase project.
+6. Configure the environment variables below.
+7. Run `npm run check`, deploy a Vercel preview, smoke-test, then promote production.
 
 ## Supabase dashboard configuration
 

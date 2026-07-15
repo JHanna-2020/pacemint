@@ -27,7 +27,7 @@ const pages: Record<LegalPageKey, { eyebrow: string; title: string; sections: Ar
       {
         title: 'AI chat data',
         body:
-          'When you use the AI chat, selected budget-period context is sent to OpenRouter so it can answer your question. Do not use AI chat for information you do not want sent to a third-party AI provider.'
+          'When you use the AI chat, selected budget-period context — including summary numbers, categories, recurring totals, and the free-text descriptions you typed for your recent expenses — is sent to OpenRouter so it can answer your question. You can exclude expense descriptions from AI chat in Settings, or avoid using AI chat for any expense whose description you do not want shared with a third-party AI provider.'
       },
       {
         title: 'Analytics',
@@ -126,7 +126,7 @@ const pages: Record<LegalPageKey, { eyebrow: string; title: string; sections: Ar
       {
         title: 'What is sent',
         body:
-          'When you send a chat message, PaceMint sends your question plus selected budget-period context, such as summary numbers, categories, recurring totals, and recent expenses.'
+          'When you send a chat message, PaceMint sends your question plus selected budget-period context: summary numbers, categories, recurring totals, and your most recent expenses (up to 20) — including the free-text description you typed for each one. You can exclude expense descriptions from AI chat in Settings.'
       },
       {
         title: 'Limits',

@@ -60,7 +60,7 @@ The app has two gates in sequence:
 
 ## Database schema
 
-The app does **not** run migrations. Schema lives in `supabase/encryption-setup.sql`. Data tables (`user_settings`, `budget_categories`, `expenses`, `recurring_expenses`) hold only structural columns (`id`, `user_id`, `recurring_id`, timestamps) plus `enc_payload text`. `user_keys` stores per-user wrapped DEKs, salts, and iteration count. All tables use RLS scoped by `user_id = auth.uid()` for multi-tenant isolation.
+The app does **not** run migrations. Schema lives in `supabase/encryption-setup.sql`, which is self-sufficient — applying it alone enables forced, owner-only RLS (`user_id = auth.uid()`) on all 6 tables via a guarded block, so the app is never left with an unprotected table if `supabase/migrations/` is skipped. Data tables (`user_settings`, `budget_categories`, `expenses`, `recurring_expenses`) hold only structural columns (`id`, `user_id`, `recurring_id`, timestamps) plus `enc_payload text`. `user_keys` stores per-user wrapped DEKs, salts, and iteration count. Files in `supabase/migrations/` upgrade that baseline (e.g. to MFA-gated policies) rather than originating RLS — see `PRODUCTION.md` for deployment order and `supabase/verify-production.sql` to check status.
 
 Gotchas when applying SQL in the Supabase SQL editor:
 - Dollar-quoted `DO $$ ... $$` blocks trigger "cannot insert multiple commands into a prepared statement" — avoid them (use `create unique index if not exists` instead of `add constraint`).

@@ -355,6 +355,7 @@ export default function App() {
                 categories={budget.categorySummaries}
                 expenses={budget.data.expenses}
                 recurringExpenses={budget.data.recurringExpenses}
+                excludeDescriptions={budget.data.settings?.excludeDescriptionsFromAI ?? false}
               />
             </div>
           </>
@@ -413,6 +414,8 @@ export default function App() {
               <SettingsPanel
                 userId={session.user.id}
                 userEmail={session.user.email ?? ''}
+                settings={budget.data.settings}
+                onToggleExcludeDescriptions={budget.setExcludeDescriptionsFromAI}
                 onMessage={setToast}
               />
             </section>
